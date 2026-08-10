@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+llm:
+  base-url: https://api.siliconflow.cn/v1
+  model: Pro/zai-org/GLM-5.1
+  api-key: sk-rmunshwxaueybzvkjunywmprqzqrddgxkfvrfulileugikap
+
+spring:
+  # 数据库连接配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/travel?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    username: root       # 你的mysql账号
+    password: 123456     # 你的mysql密码
+  #头像文件上传大小限制
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+
+# MyBatis配置（映射实体类、SQL文件）
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.panduoma.trevaljava.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    #localhost:3306：本地 MySQL 地址端口
+    #你的数据库名：刚才创建表所在的库名称
+    #serverTimezone=Asia/Shanghai 解决时区报错
+    #utf8mb4 和建表字符集保持一致，不乱码
+
+jwt:
+  secret: your-256-bit-secret-key-must-be-at-least-32-characters
+  expiration: 86400000   # 24小时
+
+
