@@ -1,7 +1,7 @@
 import axios from 'axios'
 const request = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 120000
 })
 //请求拦截器
 request.interceptors.request.use(
@@ -16,17 +16,47 @@ request.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+/** 检测响应内容或错误信息中是否包含 JWT 过期关键字 */
+const isJwtExpired = (data) => {
+  if (!data) return false
+  const str = typeof data === 'string' ? data : JSON.stringify(data)
+  return /JWT expired|token expired|令牌过期|token.*invalid|invalid.*jwt|signature.*exception/i.test(str)
+}
+
+/** 统一清除登录态并跳转登录页 */
+const clearAndRedirectLogin = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
+  window.location.href = '/login'
+}
+
 //响应拦截器处理 token 过期
 request.interceptors.response.use(
   response => {
-    return response.data
+    const data = response.data
+    // 业务码非 200 时检测 JWT 过期信息（后端可能 HTTP 200 但业务返回 JWT expired）
+    if (data && data.code !== 200) {
+      const msg = data.message || data.msg || data.errMsg || ''
+      if (isJwtExpired(msg) || isJwtExpired(data)) {
+        console.warn('[request] 检测到业务响应中 JWT 过期，跳转登录')
+        clearAndRedirectLogin()
+      }
+    }
+    return data
   },
   error => {
-    if (error.response?.status === 401) {
-      // token 过期，清除并跳转登录
-      localStorage.removeItem('token')
-      localStorage.removeItem('userInfo')
-      window.location.href = '/login'
+    const respStatus = error.response?.status
+    const respData = error.response?.data
+    const errMsg = error.message || ''
+    // HTTP 401 直接跳转
+    if (respStatus === 401) {
+      console.warn('[request] HTTP 401，跳转登录')
+      clearAndRedirectLogin()
+    }
+    // 其他 HTTP 状态码但错误内容包含 JWT 过期信息（如 500 带 JWT expired）
+    else if (isJwtExpired(respData) || isJwtExpired(errMsg)) {
+      console.warn('[request] 检测到错误响应中 JWT 过期，跳转登录')
+      clearAndRedirectLogin()
     }
     return Promise.reject(error)
   }

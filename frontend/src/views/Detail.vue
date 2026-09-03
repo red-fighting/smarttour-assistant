@@ -1,86 +1,81 @@
 <template>
   <div class="page-container">
-    <van-nav-bar 
-    :title="tripData.city + '行程规划'" 
-    left-arrow 
-    left-text="返回" 
-    fixed
-    @click-left="onBack"
+    <van-nav-bar
+      :title="tripData.city ? tripData.city + '行程规划' : '行程规划'"
+      left-arrow
+      left-text="返回"
+      fixed
+      @click-left="onBack"
     />
     <div class="page-content">
-      <div class="overview-card">
-        <div class="overview-header">
-          <h2>{{ tripData.city }} · {{ tripData.days }}天行程</h2>
-          <span class="budget-tag">预算：{{ tripData.totalBudget }}元</span>
-        </div>
-      </div>
+      <van-empty v-if="!tripData.dailyItinerary.length" description="暂无行程数据" />
 
-      <van-collapse v-model="activeDays">
-        <van-collapse-item
-          v-for="(day, index) in tripData.dailyItinerary"
-          :key="index"
-          :title="'第' + day.day + '天'"
-          :name="day.day"
-        >
-          <div class="day-section">
-            <div v-if="day.morning && day.morning.length" class="schedule-section">
-              <div class="section-label">上午</div>
-              <div class="schedule-list">
-                <div v-for="(item, idx) in day.morning" :key="idx" class="schedule-item">
-                  <span class="time">{{ item.time }}</span>
-                  <span class="activity">{{ item.activity }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-if="day.afternoon && day.afternoon.length" class="schedule-section">
-              <div class="section-label">下午</div>
-              <div class="schedule-list">
-                <div v-for="(item, idx) in day.afternoon" :key="idx" class="schedule-item">
-                  <span class="time">{{ item.time }}</span>
-                  <span class="activity">{{ item.activity }}</span>
-                </div>
-              </div>
-            </div>
-            <div v-if="day.evening && day.evening.length" class="schedule-section">
-              <div class="section-label">晚上</div>
-              <div class="schedule-list">
-                <div v-for="(item, idx) in day.evening" :key="idx" class="schedule-item">
-                  <span class="time">{{ item.time }}</span>
-                  <span class="activity">{{ item.activity }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </van-collapse-item>
-      </van-collapse>
-
-      <div class="card budget-card">
-        <div class="section-title">预算明细</div>
-        <div class="budget-list">
-          <div v-for="(item, index) in tripData.budgetBreakdown" :key="index" class="budget-item">
-            <span class="budget-label">{{ item.category }}</span>
-            <span class="budget-value">¥{{ item.amount }}</span>
-          </div>
-          <div class="budget-total">
-            <span class="budget-label">总计</span>
-            <span class="budget-value">¥{{ tripData.totalBudget }}</span>
+      <template v-else>
+        <div class="overview-card">
+          <div class="overview-header">
+            <h2>{{ tripData.city }} · {{ tripData.days }}天行程</h2>
+            <span class="budget-tag">预算：¥{{ computedTotalBudget }}</span>
           </div>
         </div>
-      </div>
 
-      <div class="card tips-card">
-        <div class="section-title">温馨提示</div>
-        <ul class="tips-list">
-          <li v-for="(tip, index) in tripData.tips" :key="index">{{ tip }}</li>
-        </ul>
-      </div>
+        <van-collapse v-model="activeDays">
+          <van-collapse-item
+            v-for="(day, index) in tripData.dailyItinerary"
+            :key="index"
+            :title="'第' + day.day + '天'"
+            :name="day.day"
+          >
+            <div class="day-section">
+              <div
+                v-for="section in scheduleSections"
+                :key="section.key"
+              >
+                <template v-if="day[section.key] && day[section.key].length">
+                  <div class="section-label">{{ section.label }}</div>
+                  <div class="schedule-list">
+                    <div
+                      v-for="(item, idx) in day[section.key]"
+                      :key="idx"
+                      class="schedule-item"
+                    >
+                      <span class="time">{{ item.time }}</span>
+                      <span class="activity">{{ item.activity }}</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </van-collapse-item>
+        </van-collapse>
 
-      <div v-if="tripData.warnings && tripData.warnings.length" class="card warning-card">
-        <div class="section-title">注意事项</div>
-        <ul class="tips-list">
-          <li v-for="(warning, index) in tripData.warnings" :key="index">{{ warning }}</li>
-        </ul>
-      </div>
+        <div v-if="budgetItems.length" class="card budget-card">
+          <div class="section-title">预算明细</div>
+          <div class="budget-list">
+            <div v-for="item in budgetItems" :key="item.key" class="budget-item">
+              <span class="budget-label">{{ item.label }}</span>
+              <span class="budget-value">¥{{ item.value }}</span>
+            </div>
+            <div class="budget-total">
+              <span class="budget-label">总计</span>
+              <span class="budget-value">¥{{ computedTotalBudget }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="tripData.tips && tripData.tips.length" class="card tips-card">
+          <div class="section-title">温馨提示</div>
+          <ul class="tips-list">
+            <li v-for="(tip, index) in tripData.tips" :key="index">{{ tip }}</li>
+          </ul>
+        </div>
+
+        <div v-if="tripData.warnings && tripData.warnings.length" class="card warning-card">
+          <div class="section-title">注意事项</div>
+          <ul class="tips-list">
+            <li v-for="(warning, index) in tripData.warnings" :key="index">{{ warning }}</li>
+          </ul>
+        </div>
+      </template>
     </div>
 
     <div class="bottom-bar">
@@ -90,28 +85,56 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const route = useRoute()
-const recommendData = ref(null)
-const activeDays = ref(['1'])
+const activeDays = ref([])
 const onBack = () => {
   router.back()
 }
-
-
-
 
 const tripData = reactive({
   city: '',
   days: 0,
   totalBudget: 0,
   dailyItinerary: [],
-  budgetBreakdown: [],
+  budgetBreakdown: {},
   tips: [],
   warnings: []
+})
+
+const scheduleSections = [
+  { key: 'morning', label: '上午' },
+  { key: 'afternoon', label: '下午' },
+  { key: 'evening', label: '晚上' }
+]
+
+const budgetLabels = {
+  accommmodation: '住宿',
+  food: '餐饮',
+  transportation: '交通',
+  tickets: '门票',
+  other: '其他'
+}
+
+const budgetItems = computed(() => {
+  const bd = tripData.budgetBreakdown
+  if (!bd) return []
+  return Object.entries(bd)
+    .filter(([_, v]) => v != null && v > 0)
+    .map(([key, value]) => ({
+      key,
+      label: budgetLabels[key] || key,
+      value: value
+    }))
+})
+
+const computedTotalBudget = computed(() => {
+  if (tripData.totalBudget) return tripData.totalBudget
+  const bd = tripData.budgetBreakdown
+  if (!bd) return 0
+  return Object.values(bd).reduce((sum, v) => sum + (v || 0), 0)
 })
 
 const goToChat = () => {
@@ -119,21 +142,19 @@ const goToChat = () => {
 }
 
 onMounted(() => {
-  // 从 router 的 state 中读取数据
   const data = history.state?.recommendData
   if (data) {
-    console.log('✅ 接收到推荐数据:', data)
-    tripData.city = data.city
-    tripData.days = data.days
-    tripData.totalBudget = data.totalBudget
-    tripData.dailyItinerary = data.dailyItinerary
-    tripData.budgetBreakdown = data.budgetBreakdown
-    tripData.tips = data.tips
-    tripData.warnings = data.warnings
-    recommendData.value = data
-    console.log('接收到推荐数据:', data)
-  } else {
-    console.warn('没有推荐数据')
+    tripData.city = data.city || ''
+    tripData.days = data.days || 0
+    tripData.totalBudget = data.totalBudget || 0
+    tripData.dailyItinerary = data.dailyItinerary || []
+    tripData.budgetBreakdown = data.budgetBreakdown || {}
+    tripData.tips = data.tips || []
+    tripData.warnings = data.warnings || []
+    // 默认展开第一天
+    if (tripData.dailyItinerary.length) {
+      activeDays.value = [tripData.dailyItinerary[0].day]
+    }
   }
 })
 </script>
@@ -141,31 +162,35 @@ onMounted(() => {
 <style scoped>
 .page-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 100%);
   padding-bottom: 80px;
 }
 .page-content {
   padding: 16px;
 }
 .card {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px rgba(67, 206, 162, 0.06);
 }
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #323233;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 14px;
 }
 .overview-card {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+  border-radius: 16px;
+  padding: 24px 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 24px rgba(67, 206, 162, 0.2);
+  color: #fff;
 }
 .overview-header {
   display: flex;
@@ -174,14 +199,19 @@ onMounted(() => {
 }
 .overview-header h2 {
   font-size: 20px;
-  font-weight: 600;
-  color: #323233;
+  font-weight: 700;
+  color: #fff;
   margin: 0;
+  letter-spacing: 0.5px;
 }
 .budget-tag {
   font-size: 14px;
   font-weight: 600;
-  color: #ee0a24;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
 }
 .day-section {
   padding-top: 8px;
@@ -194,13 +224,13 @@ onMounted(() => {
 }
 .section-label {
   font-size: 12px;
-  font-weight: 500;
-  color: #1989fa;
-  background-color: #e8f3ff;
-  padding: 4px 10px;
-  border-radius: 4px;
+  font-weight: 600;
+  color: #43cea2;
+  background: rgba(67, 206, 162, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
   display: inline-block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .schedule-list {
   padding-left: 16px;
@@ -208,8 +238,8 @@ onMounted(() => {
 .schedule-item {
   display: flex;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f7f8fa;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f5;
 }
 .schedule-item:last-child {
   border-bottom: none;
@@ -219,6 +249,7 @@ onMounted(() => {
   color: #969799;
   width: 60px;
   flex-shrink: 0;
+  font-weight: 500;
 }
 .schedule-item .activity {
   font-size: 14px;
@@ -232,7 +263,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #f7f8fa;
+  border-bottom: 1px solid #f0f2f5;
 }
 .budget-item:last-of-type {
   border-bottom: none;
@@ -244,22 +275,23 @@ onMounted(() => {
 .budget-value {
   font-size: 14px;
   color: #323233;
+  font-weight: 500;
 }
 .budget-total {
   display: flex;
   justify-content: space-between;
-  padding: 12px 0 8px;
+  padding: 14px 0 8px;
   margin-top: 8px;
-  border-top: 1px dashed #eee;
+  border-top: 1px dashed #d8dbe0;
 }
 .budget-total .budget-label {
   font-size: 16px;
-  font-weight: 600;
-  color: #323233;
+  font-weight: 700;
+  color: #1a1a2e;
 }
 .budget-total .budget-value {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: #ee0a24;
 }
 .tips-list {
@@ -276,10 +308,11 @@ onMounted(() => {
   padding-left: 20px;
 }
 .tips-list li::before {
-  content: '·';
+  content: '•';
   position: absolute;
   left: 0;
-  color: #969799;
+  color: #43cea2;
+  font-size: 16px;
 }
 .bottom-bar {
   position: fixed;
@@ -287,7 +320,8 @@ onMounted(() => {
   left: 0;
   right: 0;
   padding: 12px 16px;
-  background-color: #fff;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
 }
 </style>

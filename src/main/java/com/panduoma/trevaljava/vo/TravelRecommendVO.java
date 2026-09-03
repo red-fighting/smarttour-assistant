@@ -3,6 +3,7 @@ package com.panduoma.trevaljava.vo;
 import lombok.Data;
 
 import java.util.List;
+
 @Data
 public class TravelRecommendVO {
     private Boolean success;
@@ -17,18 +18,19 @@ public class TravelRecommendVO {
     private String rawResponse;
     private String response;
 
-
     @Data
-    public static class DailyItinerary{
+    public static class DailyItinerary {
         private Integer day;
         private String date;
-        private Timeslot morning;
-        private Timeslot afternoon;
-        private Timeslot evening;
+        private List<Timeslot> morning;
+        private List<Timeslot> afternoon;
+        private List<Timeslot> evening;
     }
 
     @Data
-    public static class Timeslot{
+    public static class Timeslot {
+        private String time;
+        private String activity;
         private String spot;
         private String duration;
         private String transportation;
@@ -37,12 +39,11 @@ public class TravelRecommendVO {
     }
 
     @Data
-    public static class BudgetBreakdown{
+    public static class BudgetBreakdown {
         private Double accommmodation;
         private Double food;
         private Double transportation;
         private Double tickets;
         private Double other;
     }
-
 }

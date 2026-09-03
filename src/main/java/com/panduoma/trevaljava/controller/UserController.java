@@ -32,9 +32,25 @@ public class UserController {
             @RequestParam("password") String password,
             @RequestParam("confirmPassword") String confirmPassword,
             @RequestParam(value = "phone", required = false) String phone,
-            @RequestParam(value = "email", required = false) String email
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "avatar", required = false) String avatar,
+            @RequestParam(value = "role", required = false, defaultValue = "0") Integer role,
+            @RequestParam(value = "registerCode", required = false) String registerCode
     ) throws IOException{
-        return userService.register(username, password, confirmPassword, phone, email);
+        return userService.register(username, password, confirmPassword, phone, email, avatar, role, registerCode);
+    }
+
+    /** 根据用户名获取头像（登录页预览用） */
+    @GetMapping("/avatar")
+    public Result<Map<String, Object>> getAvatarByUsername(@RequestParam("username") String username) {
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            return Result.fail(404, "用户不存在");
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("avatar", user.getAvatar());
+        data.put("username", user.getUsername());
+        return Result.success(data);
     }
     //@GetMapping：查询数据，参数放 URL 拼接，不能用 @RequestBody
     //@PostMapping：提交 / 新增，参数放请求体 JSON，搭配 @RequestBody 接收前端 JSON
@@ -74,8 +90,68 @@ public class UserController {
         data.put("avatar", user.getAvatar());
         data.put("email", user.getEmail());
         data.put("phone", user.getPhone());
+        data.put("role", user.getRole() == null ? 0 : user.getRole());
+        data.put("status", user.getStatus() == null ? 1 : user.getStatus());
 
         return Result.success(data);
+    }
+
+    // ========== 修改密码 ==========
+    @PostMapping("/changePassword")
+    public Result<Void> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, String> body
+    ) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Result.fail(401, "未登录");
+        }
+        String token = authHeader.substring(7);
+        Long userId = jwtUtils.getUserIdFromToken(token);
+
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        return userService.changePassword(userId, oldPassword, newPassword);
+    }
+
+    // ========== 更新个人资料 ==========
+    @PostMapping("/updateProfile")
+    public Result<Void> updateProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Result.fail(401, "未登录");
+        }
+        String token = authHeader.substring(7);
+        Long userId = jwtUtils.getUserIdFromToken(token);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername((String) body.get("username"));
+        user.setEmail((String) body.get("email"));
+        user.setPhone((String) body.get("phone"));
+        if (body.get("avatar") != null) {
+            user.setAvatar((String) body.get("avatar"));
+        }
+        return userService.updateProfile(user);
+    }
+
+    // ========== 提交反馈 ==========
+    @PostMapping("/feedback")
+    public Result<Void> submitFeedback(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, String> body
+    ) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Result.fail(401, "未登录");
+        }
+        String token = authHeader.substring(7);
+        Long userId = jwtUtils.getUserIdFromToken(token);
+
+        String type = body.get("type");
+        String content = body.get("content");
+        String contact = body.get("contact");
+        return userService.submitFeedback(userId, type, content, contact);
     }
 
 }

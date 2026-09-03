@@ -1,5 +1,8 @@
 server:
   port: 8080
+  # Tomcat 请求体限制（base64 图片会让请求体膨胀，放宽到 10MB）
+  tomcat:
+    max-http-form-post-size: 10MB
 
 llm:
   base-url: https://api.siliconflow.cn/v1
@@ -13,11 +16,25 @@ spring:
     url: jdbc:mysql://localhost:3306/travel?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
     username: root       # 你的mysql账号
     password: 123456     # 你的mysql密码
-  #头像文件上传大小限制
+    hikari:
+      # 连接池大小
+      maximum-pool-size: 10
+      minimum-idle: 5
+      # 空闲连接存活最大时间（毫秒）
+      idle-timeout: 600000
+      # 连接超时时间（毫秒）
+      connection-timeout: 30000
+      # 连接最大生命周期（毫秒）
+      max-lifetime: 1800000
+      # 数据库连接心跳检测间隔（毫秒），防止长时间空闲被数据库服务端断开
+      keepalive-time: 30000
+      # 连接测试 SQL
+      connection-test-query: SELECT 1
+  #请求大小限制（base64图片会膨胀37%，2MB图片→2.7MB base64，所以放宽到10MB）
   servlet:
     multipart:
-      max-file-size: 2MB
-      max-request-size: 2MB
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 # MyBatis配置（映射实体类、SQL文件）
 mybatis:
@@ -33,5 +50,12 @@ mybatis:
 jwt:
   secret: your-256-bit-secret-key-must-be-at-least-32-characters
   expiration: 86400000   # 24小时
+
+# 上传文件目录（绝对路径，避免相对路径因工作目录不同而出错）
+app:
+  upload:
+    dir: D:/Front-end-learning/project/Smarttour_Assistant/uploads
+  admin:
+    register-code: admin2026
 
 
